@@ -3,6 +3,18 @@ import os
 from dataset.dataset import get_loader
 from solver import Solver
 
+caltech_101_categories = ['accordion', 'airplanes', 'anchor', 'ant', 'BACKGROUND_Google', 'barrel', 'bass', 'beaver', 'binocular', 'bonsai',
+     'brain', 'brontosaurus', 'buddha', 'butterfly', 'camera', 'cannon', 'car_side', 'ceiling_fan', 'cellphone',
+     'chair', 'chandelier', 'cougar_body', 'cougar_face', 'crab', 'crayfish', 'crocodile', 'crocodile_head', 'cup',
+     'dalmatian', 'dollar_bill', 'dolphin', 'dragonfly', 'electric_guitar', 'elephant', 'emu', 'euphonium', 'ewer',
+     'Faces', 'Faces_easy', 'ferry', 'flamingo', 'flamingo_head', 'garfield', 'gerenuk', 'gramophone', 'grand_piano',
+     'hawksbill', 'headphone', 'hedgehog', 'helicopter', 'ibis', 'inline_skate', 'joshua_tree', 'kangaroo', 'ketch',
+     'lamp', 'laptop', 'Leopards', 'llama', 'lobster', 'lotus', 'mandolin', 'mayfly', 'menorah', 'metronome', 'minaret',
+     'Motorbikes', 'nautilus', 'octopus', 'okapi', 'pagoda', 'panda', 'pigeon', 'pizza', 'platypus', 'pyramid',
+     'revolver', 'rhino', 'rooster', 'saxophone', 'schooner', 'scissors', 'scorpion', 'sea_horse', 'snoopy',
+     'soccer_ball', 'stapler', 'starfish', 'stegosaurus', 'stop_sign', 'strawberry', 'sunflower', 'tick', 'trilobite',
+     'umbrella', 'watch', 'water_lilly', 'wheelchair', 'wild_cat', 'windsor_chair', 'wrench', 'yin_yang']
+
 def get_test_info(sal_mode='e'):
     if sal_mode == 'e':
         image_root = './data/ECSSD/Imgs/'
@@ -25,7 +37,21 @@ def get_test_info(sal_mode='e'):
     elif sal_mode == 'm_r': # for speed test
         image_root = './data/MSRA/Imgs_resized/'
         image_source = './data/MSRA/test_resized.lst'
-
+    elif sal_mode == 'robinson':
+        image_root = './data/Robinson/Imgs/'
+        image_source = './data/Robinson/Imgs/filename.txt'
+    elif sal_mode == 'cifar100-category0':
+        image_root = './data/cifar100/test/apple/'
+        image_source = './data/cifar100/test/apple/test.txt'
+    elif sal_mode == '101_ObjectCategories':
+        image_root = './data/101_ObjectCategories/accordion/'
+        image_source = './data/101_ObjectCategories/accordion/test.txt'
+    else:
+        for category in caltech_101_categories:
+            if sal_mode == 'caltech101-' + category:
+                image_root = './data/101_ObjectCategories/' + category + '/'
+                image_source = './data/101_ObjectCategories/' + category + '/test.txt'
+    print("sal_mode: in getting root/source directory", sal_mode)
     return image_root, image_source
 
 def main(config):
@@ -40,9 +66,10 @@ def main(config):
         train = Solver(train_loader, None, config)
         train.train()
     elif config.mode == 'test':
-        config.test_root, config.test_list = get_test_info(config.sal_mode)
+        #config.test_root, config.test_list = get_test_info(config.sal_mode)
         test_loader = get_loader(config, mode='test')
-        if not os.path.exists(config.test_fold): os.mkdir(config.test_fold)
+        if not os.path.exists(config.test_fold):
+            os.mkdir(config.test_fold)
         test = Solver(None, test_loader, config)
         test.test()
     else:
@@ -86,12 +113,28 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
     config = parser.parse_args()
 
+    # make ./results
     if not os.path.exists(config.save_folder):
         os.mkdir(config.save_folder)
 
-    # Get test set info
-    test_root, test_list = get_test_info(config.sal_mode)
-    config.test_root = test_root
-    config.test_list = test_list
+    if not os.path.exists(config.test_fold):
+        os.mkdir(config.test_fold)
 
-    main(config)
+    base_results_folder = config.test_fold
+    if "caltech101" in config.sal_mode:
+        for category in caltech_101_categories:
+            # Get test set info
+            test_root, test_list = get_test_info(config.sal_mode + '-' + category)
+            config.test_root = test_root
+            config.test_list = test_list
+
+            config.test_fold = base_results_folder + '/' + category
+            main(config)
+
+    else:
+        # Get test set info
+        test_root, test_list = get_test_info(config.sal_mode)
+        config.test_root = test_root
+        config.test_list = test_list
+
+        main(config)
